@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReadMy1040</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --deep: #3a3228; --accent: #7a9e7a; --bubble-bg: rgba(255,253,245,0.97); }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #b8c8d0; font-family: 'Jost', sans-serif; }
+
+  /* ── shared background ── */
+  .scene {
+    position: fixed; inset: 0; z-index: 0;
+    background: url('Welcome_Scene_Image.png') center center / cover no-repeat;
+  }
+  .scene-overlay {
+    position: fixed; inset: 0; z-index: 1;
+    background: radial-gradient(ellipse 80% 60% at 50% 45%, rgba(255,255,255,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── particles ── */
+  .particles { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.82);
+    box-shadow: 0 0 8px 3px rgba(255,255,255,0.5);
+    animation: floatUp linear infinite;
+  }
+
+  /* ── music button ── */
+  .music-btn {
+    position: fixed; bottom: 28px; right: 32px; z-index: 300;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,253,245,0.45); backdrop-filter: blur(10px);
+    border: 1px solid rgba(58,50,40,0.2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+  }
+  .music-btn:hover { background: rgba(255,253,245,0.7); border-color: rgba(58,50,40,0.4); }
+  .music-btn svg { width: 16px; height: 16px; fill: rgba(58,50,40,0.6); }
+
+  /* ── transition veil ── */
+  .veil {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(255,252,245,0); pointer-events: none;
+    transition: background 0.6s ease;
+  }
+  .veil.go { background: rgba(255,252,245,1); }
+
+  /* ════════════════════════════════
+     WELCOME VIEW
+  ════════════════════════════════ */
+  #viewWelcome {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  #viewWelcome.hidden { display: none; }
+
+  .lang-switcher {
+    position: fixed; top: 24px; right: 32px; z-index: 20;
+    display: flex; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeDown 1s ease forwards 1.8s;
+  }
+  .lang-btn {
+    font-family: 'Jost', sans-serif; font-weight: 400;
+    font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(40,32,22,0.75); background: none; border: none;
+    cursor: pointer; padding: 4px 2px; transition: color 0.3s ease;
+  }
+  .lang-btn:hover, .lang-btn.active { color: rgba(40,32,22,1); }
+  .lang-divider { font-weight: 200; color: rgba(58,50,40,0.3); font-size: 11px; }
+
+  .headline {
+    font-family: 'Cormorant Garamond', serif; font-weight: 300; font-style: italic;
+    font-size: clamp(40px, 6vw, 74px); line-height: 1.18;
+    color: var(--deep); text-align: center;
+    text-shadow: 0 1px 24px rgba(255,250,240,0.9), 0 4px 40px rgba(255,248,230,0.6);
+    opacity: 0; animation: fadeUp 1.4s ease forwards 0.7s;
+    max-width: 680px; padding: 0 24px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .headline em { font-style: normal; font-weight: 400; color: #4a3c28; }
+
+  .btn-wrap { margin-top: 52px; opacity: 0; animation: fadeUp 1.4s ease forwards 1.2s; }
+  .start-btn {
+    display: inline-block; font-family: 'Jost', sans-serif; font-weight: 300;
+    font-size: 14px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--deep); padding: 15px 48px;
+    border: 1px solid rgba(58,50,40,0.28); border-radius: 40px;
+    background: rgba(255,253,245,0.42); backdrop-filter: blur(10px);
+    cursor: pointer; transition: all 0.45s ease; position: relative; overflow: hidden;
+  }
+  .start-btn::before {
+    content: ''; position: absolute; inset: 0; border-radius: 40px;
+    background: rgba(255,250,235,0.38); transform: scaleX(0);
+    transform-origin: left; transition: transform 0.45s ease;
+  }
+  .start-btn:hover::before { transform: scaleX(1); }
+  .start-btn:hover { border-color: rgba(58,50,40,0.45); letter-spacing: 0.38em; }
+  .start-btn span { position: relative; z-index: 1; }
+
+  .welcome-wordmark {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    font-family: 'Cormorant Garamond', serif; font-weight: 300;
+    font-size: 10px; letter-spacing: 0.55em; text-transform: uppercase;
+    color: rgba(58,50,40,0.28); white-space: nowrap;
+    opacity: 0; animation: fadeUp 1.4s ease forwards 2.1s; z-index: 20;
+  }
+
+  /* ════════════════════════════════
+     FORM VIEW
+  ════════════════════════════════ */
+  #viewForm {
+    position: fixed; inset: 0; z-index: 10;
+    display: none;
+  }
+  #viewForm.visible { display: block; }
+
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+    height: 50px;
+    background: rgba(253,248,240,0.88); backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(58,50,40,0.1);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+  }
+  .topbar-wordmark {
+    font-family: 'Cormorant Garamond', serif; font-weight: 300;
+    font-size: 15px; letter-spacing: 0.35em; text-transform: uppercase;
+    color: rgba(58,50,40,0.65); cursor: pointer; background: none; border: none;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .hint { font-size: 11px; letter-spacing: 0.1em; font-weight: 300; color: rgba(58,50,40,0.38); }
+  .page-btn {
+    font-family: 'Jost', sans-serif; font-weight: 300;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(58,50,40,0.5); background: none;
+    border: 1px solid rgba(58,50,40,0.2); border-radius: 20px;
+    padding: 5px 14px; cursor: pointer; transition: all 0.3s ease;
+  }
+  .page-btn.active, .page-btn:hover {
+    color: var(--deep); border-color: rgba(58,50,40,0.5);
+    background: rgba(255,250,240,0.6);
+  }
+
+  .scroll-wrap {
+    position: absolute; inset: 0; top: 50px;
+    overflow-y: auto; overflow-x: auto;
+    display: flex; justify-content: center;
+    padding: 32px 24px 60px;
+  }
+
+  .form-card {
+    position: relative; display: inline-block; border-radius: 4px; flex-shrink: 0;
+    box-shadow: 0 4px 20px rgba(58,50,40,0.12), 0 20px 60px rgba(58,50,40,0.18), 0 0 0 1px rgba(255,255,255,0.6);
+  }
+  .form-card.rise { animation: riseUp 0.8s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .form-card.switching { animation: switchOut 0.3s ease forwards; }
+  .form-card.switch-in { animation: riseUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+  .form-card img {
+    display: block; width: 800px; height: auto; border-radius: 4px;
+    user-select: none; -webkit-user-drag: none;
+  }
+
+  .hotspot-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+  .hbox {
+    position: absolute;
+    background: rgba(122,158,122,0.12); border: 1.5px solid rgba(122,158,122,0.0);
+    border-radius: 2px; cursor: pointer; pointer-events: all;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .hbox:hover { background: rgba(122,158,122,0.28); border-color: rgba(122,158,122,0.55); }
+  .hbox.active { background: rgba(122,158,122,0.22); border-color: var(--accent); }
+
+  .bubble {
+    position: absolute; z-index: 200;
+    background: var(--bubble-bg); border: 1px solid rgba(58,50,40,0.1);
+    border-radius: 14px; padding: 16px 18px; width: 268px;
+    box-shadow: 0 8px 36px rgba(58,50,40,0.16); display: none;
+  }
+  .bubble.on { display: block; animation: pop 0.18s ease; }
+  .bubble-tag { font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); font-weight: 400; margin-bottom: 5px; }
+  .bubble-title { font-size: 13.5px; font-weight: 400; color: var(--deep); margin-bottom: 7px; line-height: 1.3; }
+  .bubble-body { font-size: 12px; font-weight: 300; color: rgba(58,50,40,0.72); line-height: 1.65; }
+  .bubble-x { position: absolute; top: 11px; right: 14px; font-size: 17px; color: rgba(58,50,40,0.28); cursor: pointer; line-height: 1; transition: color 0.2s; }
+  .bubble-x:hover { color: var(--deep); }
+
+  /* ── keyframes ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes floatUp {
+    0% { transform: translateY(0) translateX(0); opacity: 0; }
+    8% { opacity: 0.9; } 92% { opacity: 0.5; }
+    100% { transform: translateY(-100vh) translateX(var(--dx)); opacity: 0; }
+  }
+  @keyframes riseUp { from { opacity: 0; transform: translateY(60px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes switchOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(30px); } }
+  @keyframes pop { from { opacity: 0; transform: scale(0.95) translateY(4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- shared layer -->
+<div class="scene"></div>
+<div class="scene-overlay"></div>
+<div class="particles" id="particles"></div>
+<div class="veil" id="veil"></div>
+
+<audio id="bgMusic" loop>
+  <source src="bg-music.mp3" type="audio/mpeg">
+</audio>
+
+<button class="music-btn" id="musicBtn" title="Toggle music">
+  <svg id="iconSound" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+  <svg id="iconMute" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+</button>
+
+<!-- ══ WELCOME VIEW ══ -->
+<div class="lang-switcher" id="langSwitcher">
+  <button class="lang-btn active" data-lang="en">EN</button>
+  <span class="lang-divider">·</span>
+  <button class="lang-btn" data-lang="zh">中文</button>
+  <span class="lang-divider">·</span>
+  <button class="lang-btn" data-lang="es">ES</button>
+</div>
+
+<div id="viewWelcome">
+  <h1 class="headline" id="headline">
+    Still&nbsp;confused?<br>
+    <em id="headline-sub">Help me read my 1040.</em>
+  </h1>
+  <div class="btn-wrap">
+    <button class="start-btn" id="startBtn"><span id="btn-text">Get Started</span></button>
+  </div>
+</div>
+
+<p class="welcome-wordmark" id="welcomeWordmark">ReadMy1040</p>
+
+<!-- ══ FORM VIEW ══ -->
+<div id="viewForm">
+  <div class="topbar">
+    <button class="topbar-wordmark" id="backBtn">ReadMy1040</button>
+    <div class="topbar-right">
+      <span class="hint">Click any highlighted box to learn what it means</span>
+      <button class="page-btn active" id="btn1">Page 1</button>
+      <button class="page-btn" id="btn2">Page 2</button>
+    </div>
+  </div>
+  <div class="scroll-wrap">
+    <div class="form-card" id="formCard">
+      <img id="formImg" src="1040_page-1.png" alt="Form 1040" draggable="false">
+      <div class="hotspot-layer" id="hotspots"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// MUSIC
+// ══════════════════════════════════════════════
+const music = document.getElementById('bgMusic');
+const musicBtn = document.getElementById('musicBtn');
+const iconSound = document.getElementById('iconSound');
+const iconMute = document.getElementById('iconMute');
+music.volume = 0.35;
+let musicStarted = false;
+
+function tryStartMusic() {
+  if (!musicStarted) {
+    music.play().then(() => { musicStarted = true; }).catch(() => {});
+  }
+}
+document.addEventListener('click', tryStartMusic, { once: true });
+
+musicBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  tryStartMusic();
+  if (music.paused) {
+    music.play();
+    iconSound.style.display = ''; iconMute.style.display = 'none';
+  } else {
+    music.pause();
+    iconSound.style.display = 'none'; iconMute.style.display = '';
+  }
+});
+
+// ══════════════════════════════════════════════
+// PARTICLES
+// ══════════════════════════════════════════════
+const pContainer = document.getElementById('particles');
+for (let i = 0; i < 30; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = Math.random() * 7 + 3;
+  p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;bottom:${Math.random()*40}%;--dx:${(Math.random()-0.5)*80}px;animation-duration:${Math.random()*10+7}s;animation-delay:${Math.random()*10}s;filter:blur(${Math.random()*1.2}px);`;
+  pContainer.appendChild(p);
+}
+
+function spawnBurst(refEl) {
+  const rect = refEl.getBoundingClientRect();
+  for (let i = 0; i < 3; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 8 + 4;
+    p.style.cssText = `width:${size}px;height:${size}px;position:fixed;left:${rect.left + Math.random()*rect.width}px;top:${rect.top + Math.random()*rect.height*0.5}px;--dx:${(Math.random()-0.5)*100}px;animation-duration:${Math.random()*2+1.5}s;animation-delay:0s;pointer-events:none;z-index:400;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3500);
+  }
+}
+
+// ══════════════════════════════════════════════
+// LANGUAGE
+// ══════════════════════════════════════════════
+let currentLang = 'en';
+const copy = {
+  en: { line1: 'Still\u00a0confused?', line2: 'Help me read my 1040.', btn: 'Get Started', hint: 'Click any highlighted box to learn what it means' },
+  zh: { line1: '看不懂税单？', line2: '帮我读懂我的 1040。', btn: '开始', hint: '点击任意高亮格子了解它的含义' },
+  es: { line1: '¿Todavía\u00a0confundido?', line2: 'Ayúdame a leer mi 1040.', btn: 'Comenzar', hint: 'Haz clic en cualquier casilla para ver su significado' }
+};
+
+function applyLang(lang) {
+  currentLang = lang;
+  const h = document.getElementById('headline');
+  h.style.opacity = '0'; h.style.transform = 'translateY(8px)';
+  setTimeout(() => {
+    h.firstChild.textContent = copy[lang].line1 + '\n';
+    document.getElementById('headline-sub').textContent = copy[lang].line2;
+    document.getElementById('btn-text').textContent = copy[lang].btn;
+    document.querySelector('.hint').textContent = copy[lang].hint;
+    h.style.opacity = '1'; h.style.transform = 'translateY(0)';
+  }, 300);
+}
+
+document.querySelectorAll('.lang-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.lang-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    applyLang(b.dataset.lang);
+  });
+});
+
+// ══════════════════════════════════════════════
+// VIEW SWITCHING
+// ══════════════════════════════════════════════
+function showForm() {
+  const veil = document.getElementById('veil');
+  for (let i = 0; i < 40; i++) setTimeout(() => spawnBurst(document.getElementById('startBtn')), i * 30);
+  setTimeout(() => veil.classList.add('go'), 100);
+  setTimeout(() => {
+    document.getElementById('viewWelcome').classList.add('hidden');
+    document.getElementById('welcomeWordmark').style.display = 'none';
+    document.getElementById('langSwitcher').style.display = 'none';
+    document.getElementById('viewForm').classList.add('visible');
+    const card = document.getElementById('formCard');
+    card.classList.add('rise');
+    setTimeout(() => card.classList.remove('rise'), 900);
+    veil.classList.remove('go');
+    render(P1);
+  }, 700);
+}
+
+function showWelcome() {
+  const veil = document.getElementById('veil');
+  veil.classList.add('go');
+  setTimeout(() => {
+    document.getElementById('viewForm').classList.remove('visible');
+    document.getElementById('viewWelcome').classList.remove('hidden');
+    document.getElementById('welcomeWordmark').style.display = '';
+    document.getElementById('langSwitcher').style.display = '';
+    veil.classList.remove('go');
+    currentFormPage = 1;
+    document.getElementById('formImg').src = '1040_page-1.png';
+    document.getElementById('btn1').classList.add('active');
+    document.getElementById('btn2').classList.remove('active');
+  }, 700);
+}
+
+// button hover burst
+let burstTimer = null;
+const startBtn = document.getElementById('startBtn');
+startBtn.addEventListener('mouseenter', () => { spawnBurst(startBtn); burstTimer = setInterval(() => spawnBurst(startBtn), 300); });
+startBtn.addEventListener('mouseleave', () => { clearInterval(burstTimer); });
+startBtn.addEventListener('click', showForm);
+document.getElementById('backBtn').addEventListener('click', showWelcome);
+
+// ══════════════════════════════════════════════
+// FORM / 1040 LOGIC
+// ══════════════════════════════════════════════
+const IMG_W = 1700, IMG_H = 2200;
+let currentFormPage = 1;
+let activeBubble = null, activeBox = null;
+
+const P1 = [
+  { id:'filing-status', x:95, y:568, w:1510, h:204, tag:'Filing Status', title:'Filing Status', body:'How you file your taxes. Single, Married Filing Jointly (MFJ), Married Filing Separately (MFS), Head of Household (HOH), or Qualifying Surviving Spouse. This affects your tax bracket and standard deduction. Most married couples file jointly to minimize their total tax bill.' },
+  { id:'digital-assets', x:95, y:774, w:1510, h:51, tag:'Digital Assets', title:'Digital Assets (Crypto)', body:'Did you receive, sell, or exchange cryptocurrency or other digital assets in 2025? Even small transactions count. Answer Yes if you sold crypto for a profit or loss, received it as payment, or received it as a reward. If Yes, you\'ll likely need Schedule D.' },
+  { id:'line-1a', x:1400, y:1250, w:200, h:33, tag:'Line 1a · Income', title:'Line 1a — W-2 Wages', body:'Your total wages, salary, and tips from all W-2 jobs. This comes directly from Box 1 of your W-2 form. It\'s your gross pay minus any pre-tax deductions your employer took out (like 401k contributions or health insurance premiums).' },
+  { id:'line-1b', x:1400, y:1283, w:200, h:33, tag:'Line 1b · Income', title:'Line 1b — Household Employee Wages', body:'Wages paid to a household employee (like a nanny or housekeeper) that weren\'t reported on a W-2. Most people leave this blank. If you employed household workers and paid them in cash, this is where to report it.' },
+  { id:'line-1c', x:1400, y:1317, w:200, h:33, tag:'Line 1c · Income', title:'Line 1c — Tip Income Not on W-2', body:'Tips you received but didn\'t report to your employer. All tip income is taxable. If your employer included your tips in Box 1 of your W-2, this is $0. Only enter tips your employer doesn\'t already know about.' },
+  { id:'line-1d', x:1400, y:1350, w:200, h:33, tag:'Line 1d · Income', title:'Line 1d — Medicaid Waiver Payments', body:'Certain Medicaid waiver payments for care of a disabled person in your home that are not reported on a W-2 but are still taxable income. Most people leave this blank. Relevant mainly to family caregivers who receive Medicaid payments.' },
+  { id:'line-1e', x:1400, y:1383, w:200, h:33, tag:'Line 1e · Income', title:'Line 1e — Dependent Care Benefits', body:'Taxable dependent care benefits from your employer (like a dependent care FSA). This comes from Form 2441 Line 26. If your employer-provided dependent care benefits exceed the IRS limit, the excess is taxable and goes here.' },
+  { id:'line-1f', x:1400, y:1417, w:200, h:33, tag:'Line 1f · Income', title:'Line 1f — Adoption Benefits', body:'Employer-provided adoption assistance benefits reported on Form 8839. If your employer helped pay for an adoption, amounts above the tax-free limit are taxable income reported here.' },
+  { id:'line-1g', x:1400, y:1450, w:200, h:33, tag:'Line 1g · Income', title:'Line 1g — Wages from Form 8919', body:'Wages for workers who were misclassified as independent contractors but should have been employees. If you filed Form 8919 to report uncollected Social Security and Medicare taxes, those wages flow to this line.' },
+  { id:'line-1i', x:1140, y:1513, w:200, h:33, tag:'Line 1i · Income', title:'Line 1i — Nontaxable Combat Pay Election', body:'For military members only. Nontaxable combat pay is normally excluded from income, but you can elect to include it — this can increase your Earned Income Credit if it results in a higher credit. Most non-military filers leave this blank.' },
+  { id:'line-1z', x:1400, y:1550, w:200, h:33, tag:'Line 1z · Income', title:'Line 1z — Total Wages', body:'The sum of all wage lines (1a through 1h). For most people who have a regular W-2 job, this equals Line 1a. It only differs if you had household employees, unreported tips, or other special wage situations.' },
+  { id:'line-2a', x:700, y:1580, w:197, h:33, tag:'Line 2a · Income', title:'Line 2a — Tax-Exempt Interest', body:'Interest income that is NOT taxed by the federal government — typically from municipal bonds. You still report it here (for informational purposes), but it doesn\'t add to your taxable income. Your bank sends a 1099-INT showing this.' },
+  { id:'line-2b', x:1400, y:1583, w:200, h:33, tag:'Line 2b · Income', title:'Line 2b — Taxable Interest', body:'Interest income that IS taxed — from bank savings accounts, CDs, Treasury bonds, etc. Your bank reports this on a 1099-INT. If you earned more than $10 in interest, you\'ll receive this form. This amount gets added to your total income.' },
+  { id:'line-3a', x:700, y:1617, w:197, h:33, tag:'Line 3a · Income', title:'Line 3a — Qualified Dividends', body:'A subset of your ordinary dividends that qualify for a lower tax rate (0%, 15%, or 20% depending on your income). These are dividends from US companies or qualified foreign corporations held long enough. Your 1099-DIV will separate these out.' },
+  { id:'line-3b', x:1400, y:1617, w:200, h:33, tag:'Line 3b · Income', title:'Line 3b — Ordinary Dividends', body:'Total dividends paid to you from stocks or mutual funds. This comes from Box 1a of your 1099-DIV. Line 3a (qualified dividends) is a portion of this amount. The difference between 3b and 3a is taxed at your regular income tax rate.' },
+  { id:'line-4a', x:700, y:1683, w:197, h:33, tag:'Line 4a · Income', title:'Line 4a — Total IRA Distributions', body:'The gross amount you withdrew from an IRA (Traditional or Roth). From Box 1 of your 1099-R. This is the total amount distributed — not necessarily the amount you owe tax on. The taxable portion goes to Line 4b.' },
+  { id:'line-4b', x:1400, y:1681, w:200, h:33, tag:'Line 4b · Income', title:'Line 4b — Taxable IRA Amount', body:'The portion of your IRA withdrawal that\'s subject to income tax. Traditional IRA withdrawals are usually fully taxable. Roth IRA withdrawals are usually tax-free (Line 4b = $0). If you rolled money to another retirement account, this may also be $0.' },
+  { id:'line-5a', x:700, y:1747, w:197, h:33, tag:'Line 5a · Income', title:'Line 5a — Total Pension & Annuity', body:'The gross amount you received from pensions, annuities, or 401(k) distributions. From Box 1 of your 1099-R. Like Line 4a, this is the total — not all of it may be taxable. The taxable portion is on Line 5b.' },
+  { id:'line-5b', x:1400, y:1750, w:200, h:33, tag:'Line 5b · Income', title:'Line 5b — Taxable Pension Amount', body:'The taxable portion of your pension or 401(k) distribution. From Box 2a of your 1099-R. If you made after-tax contributions to your pension, part of each payment is tax-free (return of your investment) and part is taxable.' },
+  { id:'line-6a', x:700, y:1817, w:197, h:33, tag:'Line 6a · Income', title:'Line 6a — Total Social Security Benefits', body:'The total Social Security benefits you received for the year, shown in Box 5 of your SSA-1099. This is the gross amount before Medicare premiums were deducted. Not all of this will be taxable — that depends on your other income.' },
+  { id:'line-6b', x:1400, y:1817, w:200, h:33, tag:'Line 6b · Income', title:'Line 6b — Taxable Social Security', body:'The portion of Social Security benefits subject to federal tax. Depending on your total income: if it\'s low enough, $0 is taxable. Otherwise, up to 50% or 85% may be taxable. If Social Security is your only income, it\'s almost always $0 here.' },
+  { id:'line-7a', x:1400, y:1917, w:200, h:33, tag:'Line 7a · Income', title:'Line 7a — Capital Gain or (Loss)', body:'Profit or loss from selling investments: stocks, ETFs, real estate, crypto, etc. If you sold investments, attach Schedule D. Short-term gains (held ≤1 year) are taxed as ordinary income. Long-term gains (held >1 year) get preferential rates of 0%, 15%, or 20%.' },
+  { id:'line-8', x:1400, y:1983, w:200, h:33, tag:'Line 8 · Income', title:'Line 8 — Additional Income (Schedule 1)', body:'Other income that doesn\'t fit the lines above — things like self-employment income, alimony received (pre-2019 divorces), rental income, gambling winnings, prizes, and more. All reported on Schedule 1, which feeds into this line.' },
+  { id:'line-9', x:1400, y:2017, w:200, h:33, tag:'Line 9 · Income', title:'Line 9 — Total Income', body:'The grand total of everything: wages + interest + dividends + retirement + Social Security + capital gains + other income. This is your income before any "above-the-line" deductions. It\'s the starting point for calculating your tax.' },
+  { id:'line-10', x:1400, y:2050, w:200, h:33, tag:'Line 10 · Adjustments', title:'Line 10 — Adjustments to Income', body:'Deductions you can take regardless of whether you itemize — sometimes called "above-the-line" deductions. Common examples: student loan interest, contributions to a Traditional IRA, self-employed health insurance, alimony paid (pre-2019). From Schedule 1.' },
+  { id:'line-11a', x:1400, y:2083, w:200, h:33, tag:'Line 11a · AGI', title:'Line 11a — Adjusted Gross Income (AGI)', body:'Line 9 minus Line 10. AGI is one of the most important numbers on your return — it\'s the basis for calculating many credits and deductions. A lower AGI can mean more eligibility for education credits, IRA deductions, medical deductions, and more.' },
+];
+
+const P2 = [
+  { id:'line-11b', x:1400, y:100, w:200, h:33, tag:'Line 11b · Tax & Credits', title:'Line 11b — Adjusted Gross Income (from Page 1)', body:'This is just Line 11a carried over from Page 1 — your Adjusted Gross Income. It\'s the starting point for Page 2 calculations.' },
+  { id:'line-12e', x:1400, y:267, w:200, h:33, tag:'Line 12e · Deductions', title:'Line 12e — Standard or Itemized Deduction', body:'Either your standard deduction (a fixed amount based on filing status: $15,750 Single, $31,500 MFJ, $23,625 HOH for 2025) or your itemized deductions from Schedule A, whichever is larger. Most people take the standard deduction.' },
+  { id:'line-13a', x:1400, y:300, w:200, h:33, tag:'Line 13a · Deductions', title:'Line 13a — Qualified Business Income Deduction', body:'Self-employed people and owners of pass-through businesses (S-corps, partnerships, sole proprietors) may deduct up to 20% of their qualified business income. Calculated on Form 8995. If you only have W-2 income, this is $0.' },
+  { id:'line-14', x:1400, y:367, w:200, h:33, tag:'Line 14 · Deductions', title:'Line 14 — Total Deductions', body:'The sum of Line 12e and Line 13a. This is the total amount subtracted from your AGI to arrive at your taxable income.' },
+  { id:'line-15', x:1400, y:400, w:200, h:33, tag:'Line 15 · Tax', title:'Line 15 — Taxable Income', body:'Line 11b minus Line 14. This is the income your tax is actually calculated on. It\'s almost always less than your AGI because deductions reduce it. Your tax bracket is based on this number.' },
+  { id:'line-16', x:1400, y:433, w:200, h:33, tag:'Line 16 · Tax', title:'Line 16 — Tax', body:'The actual federal income tax on your taxable income, calculated from the IRS tax tables or tax rate schedules. This is your base tax before any credits or additional taxes are added.' },
+  { id:'line-17', x:1400, y:467, w:200, h:33, tag:'Line 17 · Tax', title:'Line 17 — Additional Tax (Schedule 2)', body:'Additional taxes from Schedule 2, such as Alternative Minimum Tax (AMT). Most middle-income filers aren\'t affected by AMT. This is $0 for most people.' },
+  { id:'line-18', x:1400, y:500, w:200, h:33, tag:'Line 18 · Tax', title:'Line 18 — Total Tax Before Credits', body:'Lines 16 + 17. Your total tax liability before any credits reduce it.' },
+  { id:'line-19', x:1400, y:533, w:200, h:33, tag:'Line 19 · Credits', title:'Line 19 — Child Tax Credit', body:'Up to $2,000 per qualifying child under age 17. Reduces your tax dollar-for-dollar. To get the full credit your income must be below $200,000 (single) or $400,000 (married). From Schedule 8812.' },
+  { id:'line-20', x:1400, y:567, w:200, h:33, tag:'Line 20 · Credits', title:'Line 20 — Other Credits (Schedule 3)', body:'Additional credits from Schedule 3: education credits, foreign tax credit, retirement savings credit, clean energy credits, and more. Each credit reduces your tax dollar-for-dollar.' },
+  { id:'line-22', x:1400, y:633, w:200, h:33, tag:'Line 22 · Tax', title:'Line 22 — Tax After Credits', body:'Line 18 minus Line 21. Your tax after all credits have been applied. If this is $0 or less, you owe no income tax (though you may still owe self-employment tax or other taxes).' },
+  { id:'line-23', x:1400, y:667, w:200, h:33, tag:'Line 23 · Other Taxes', title:'Line 23 — Other Taxes', body:'Other taxes not included above — mainly self-employment tax (15.3% on net self-employment income). Also includes household employment taxes, additional Medicare tax on high earners, and net investment income tax.' },
+  { id:'line-24', x:1400, y:700, w:200, h:33, tag:'Line 24 · Tax', title:'Line 24 — Total Tax', body:'Your grand total federal tax liability for the year. This is what you actually owe — before subtracting what you\'ve already paid through withholding or estimated payments.' },
+  { id:'line-25a', x:1140, y:767, w:198, h:33, tag:'Line 25a · Payments', title:'Line 25a — Federal Tax Withheld (W-2)', body:'Federal income tax your employer withheld from your paychecks, shown in Box 2 of your W-2. This is money you already paid toward your tax bill throughout the year.' },
+  { id:'line-25b', x:1140, y:800, w:198, h:33, tag:'Line 25b · Payments', title:'Line 25b — Federal Tax Withheld (1099)', body:'Federal income tax withheld from non-wage income — freelance payments, retirement distributions, gambling winnings, etc. Shown in the federal tax withheld box of your 1099 forms.' },
+  { id:'line-25d', x:1400, y:867, w:200, h:33, tag:'Line 25d · Payments', title:'Line 25d — Total Federal Tax Withheld', body:'The sum of all federal income tax withheld (Lines 25a + 25b + 25c). This is the total you\'ve already pre-paid to the IRS during the year.' },
+  { id:'line-26', x:1400, y:900, w:200, h:33, tag:'Line 26 · Payments', title:'Line 26 — Estimated Tax Payments', body:'Quarterly estimated tax payments you made directly to the IRS during 2025, plus any overpayment you applied from your 2024 return. Self-employed people and investors often make these payments to avoid underpayment penalties.' },
+  { id:'line-27a', x:1140, y:1000, w:198, h:33, tag:'Line 27a · Credits', title:'Line 27a — Earned Income Credit (EIC)', body:'A refundable credit for low-to-moderate income workers, especially those with children. "Refundable" means it can reduce your tax below zero and result in a refund even if you owe no tax. One of the most valuable credits for eligible filers.' },
+  { id:'line-28', x:1140, y:1133, w:198, h:33, tag:'Line 28 · Credits', title:'Line 28 — Additional Child Tax Credit', body:'The refundable portion of the Child Tax Credit. If your Child Tax Credit (Line 19) exceeds your tax liability, you may get up to $1,700 per child back as a refund through this credit. From Schedule 8812.' },
+  { id:'line-29', x:1140, y:1167, w:198, h:33, tag:'Line 29 · Credits', title:'Line 29 — American Opportunity Credit', body:'A refundable education credit worth up to $2,500 per student for the first 4 years of college. 40% ($1,000) is refundable. Requires Form 8863. Income limits apply.' },
+  { id:'line-32', x:1400, y:1267, w:200, h:33, tag:'Line 32 · Payments', title:'Line 32 — Total Other Payments & Refundable Credits', body:'Sum of EIC, Additional Child Tax Credit, American Opportunity Credit, and other refundable credits. These can all generate a refund even if you owe no tax.' },
+  { id:'line-33', x:1400, y:1300, w:200, h:33, tag:'Line 33 · Payments', title:'Line 33 — Total Payments', body:'Everything you\'ve paid: withholding (25d) + estimated payments (26) + refundable credits (32). This is the total credited toward your tax bill.' },
+  { id:'line-34', x:1400, y:1333, w:200, h:33, tag:'Line 34 · Refund', title:'Line 34 — Amount Overpaid', body:'If Line 33 (total payments) is more than Line 24 (total tax), you overpaid. This is your total overpayment — you can get it refunded or apply it to next year\'s taxes.' },
+  { id:'line-35a', x:1400, y:1367, w:200, h:33, tag:'Line 35a · Refund', title:'Line 35a — Refund Amount', body:'The portion of your overpayment you want refunded to you. This is what hits your bank account or comes as a check. If you split your refund, use Form 8888.' },
+  { id:'line-37', x:1400, y:1530, w:200, h:33, tag:'Line 37 · Amount Owed', title:'Line 37 — Amount You Owe', body:'If Line 33 (total payments) is less than Line 24 (total tax), you owe the difference. This must be paid by the April filing deadline to avoid interest and penalties. You can pay at irs.gov/payments.' },
+  { id:'line-38', x:1140, y:1567, w:200, h:33, tag:'Line 38 · Penalty', title:'Line 38 — Estimated Tax Penalty', body:'A penalty if you didn\'t pay enough tax throughout the year via withholding or estimated payments. Generally applies if you owe more than $1,000 and paid less than 90% of this year\'s tax or 100% of last year\'s tax.' },
+];
+
+function render(boxes) {
+  const layer = document.getElementById('hotspots');
+  layer.innerHTML = '';
+  const img = document.getElementById('formImg');
+  const scaleX = img.offsetWidth / IMG_W;
+  const scaleY = img.offsetHeight / IMG_H;
+  layer.style.height = img.offsetHeight + 'px';
+  boxes.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'hbox';
+    el.style.cssText = `left:${b.x*scaleX}px;top:${b.y*scaleY}px;width:${b.w*scaleX}px;height:${b.h*scaleY}px;`;
+    el.addEventListener('click', e => { e.stopPropagation(); showBubble(b, el, scaleX, scaleY); });
+    layer.appendChild(el);
+  });
+}
+
+function showBubble(b, boxEl, scaleX, scaleY) {
+  closeBubble();
+  boxEl.classList.add('active');
+  activeBox = boxEl;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble on';
+  bubble.innerHTML = `<span class="bubble-x">×</span><div class="bubble-tag">${b.tag}</div><div class="bubble-title">${b.title}</div><div class="bubble-body">${b.body}</div>`;
+  const bx = b.x*scaleX, by = b.y*scaleY, bw = b.w*scaleX;
+  let left = bx - 278; if (left < 4) left = bx + bw + 10;
+  let top = by - 16; if (top < 0) top = 4;
+  bubble.style.cssText = `left:${left}px;top:${top}px;`;
+  document.getElementById('hotspots').appendChild(bubble);
+  activeBubble = bubble;
+  bubble.querySelector('.bubble-x').addEventListener('click', e => { e.stopPropagation(); closeBubble(); });
+}
+
+function closeBubble() {
+  if (activeBubble) { activeBubble.remove(); activeBubble = null; }
+  if (activeBox) { activeBox.classList.remove('active'); activeBox = null; }
+}
+
+document.addEventListener('click', closeBubble);
+
+function switchPage(toPage) {
+  if (currentFormPage === toPage) return;
+  const card = document.getElementById('formCard');
+  card.classList.add('switching');
+  setTimeout(() => {
+    currentFormPage = toPage;
+    document.getElementById('formImg').src = toPage === 1 ? '1040_page-1.png' : '1040_page-2.png';
+    document.getElementById('btn1').classList.toggle('active', toPage === 1);
+    document.getElementById('btn2').classList.toggle('active', toPage === 2);
+    closeBubble();
+    card.classList.remove('switching');
+    card.classList.add('switch-in');
+    document.getElementById('formImg').onload = () => {
+      render(toPage === 1 ? P1 : P2);
+      setTimeout(() => card.classList.remove('switch-in'), 600);
+    };
+  }, 300);
+}
+
+document.getElementById('btn1').addEventListener('click', () => switchPage(1));
+document.getElementById('btn2').addEventListener('click', () => switchPage(2));
+
+window.addEventListener('load', () => {
+  document.getElementById('formImg').onload = () => render(P1);
+  if (document.getElementById('formImg').complete) render(P1);
+});
+window.addEventListener('resize', () => { currentFormPage === 1 ? render(P1) : render(P2); });
+</script>
+</body>
+</html>
