@@ -177,18 +177,52 @@
   .hbox:hover { background: rgba(122,158,122,0.28); border-color: rgba(122,158,122,0.55); }
   .hbox.active { background: rgba(122,158,122,0.22); border-color: var(--accent); }
 
-  .bubble {
-    position: absolute; z-index: 200;
-    background: var(--bubble-bg); border: 1px solid rgba(58,50,40,0.1);
-    border-radius: 14px; padding: 16px 18px; width: 268px;
-    box-shadow: 0 8px 36px rgba(58,50,40,0.16); display: none;
+  /* ── bubble system ── */
+  /* Bubbles are positioned fixed relative to viewport, outside form-card */
+  .bbl {
+    position: fixed; z-index: 400;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: all; cursor: default;
   }
-  .bubble.on { display: block; animation: pop 0.18s ease; }
-  .bubble-tag { font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); font-weight: 400; margin-bottom: 5px; }
-  .bubble-title { font-size: 13.5px; font-weight: 400; color: var(--deep); margin-bottom: 7px; line-height: 1.3; }
-  .bubble-body { font-size: 12px; font-weight: 300; color: rgba(58,50,40,0.72); line-height: 1.65; }
-  .bubble-x { position: absolute; top: 11px; right: 14px; font-size: 17px; color: rgba(58,50,40,0.28); cursor: pointer; line-height: 1; transition: color 0.2s; }
-  .bubble-x:hover { color: var(--deep); }
+  .bbl.in  { animation: bubbleIn  0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .bbl.out { animation: bubbleOut 0.35s ease forwards; pointer-events: none; }
+  .bbl-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; pointer-events: none;
+  }
+  .bbl-text {
+    position: relative; z-index: 1;
+    font-family: 'Jost', sans-serif; font-weight: 400;
+    font-size: 13px; line-height: 1.55; text-align: center;
+    color: rgba(255,255,255,1);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7);
+    padding: 28px 40px;
+    pointer-events: none;
+    width: 100%;
+    word-break: break-word;
+  }
+  .bbl-text.clickable {
+    pointer-events: all; cursor: pointer;
+    font-size: 15px; font-weight: 500; letter-spacing: 0.05em;
+    transition: text-shadow 0.2s;
+  }
+  .bbl-text.clickable:hover { text-shadow: 0 0 18px rgba(255,255,255,1), 0 1px 8px rgba(0,0,0,0.8); }
+  .bbl.sz-sm { width: 160px; height: 160px; }
+  .bbl.sz-md { width: 210px; height: 210px; }
+  .bbl.sz-lg { width: 360px; height: 360px; }
+
+  .bbl.sz-lg .bbl-text {
+    font-size: 14px; line-height: 1.6; padding: 55px 65px;
+  }
+  @keyframes bubbleIn {
+    0%   { opacity: 0; transform: scale(0.5) translateY(40px); }
+    60%  { opacity: 1; transform: scale(1.06) translateY(-8px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes bubbleOut {
+    0%   { opacity: 1; transform: scale(1) translateY(0); }
+    100% { opacity: 0; transform: scale(0.7) translateY(-30px); }
+  }
 
   /* ── keyframes ── */
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -200,7 +234,6 @@
   }
   @keyframes riseUp { from { opacity: 0; transform: translateY(60px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes switchOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(30px); } }
-  @keyframes pop { from { opacity: 0; transform: scale(0.95) translateY(4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 </style>
 </head>
 <body>
@@ -214,6 +247,8 @@
 <audio id="bgMusic" loop>
   <source src="bg-music.mp3" type="audio/mpeg">
 </audio>
+<audio id="sndBloop" src="Bloop_sound_effect.mp3"></audio>
+<audio id="sndPop" src="bubble_pop_sound_effect.mp3"></audio>
 
 <button class="music-btn" id="musicBtn" title="Toggle music">
   <svg id="iconSound" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
@@ -319,7 +354,7 @@ function spawnBurst(refEl) {
 let currentLang = 'en';
 const copy = {
   en: { line1: 'Still\u00a0confused?', line2: 'Help me read my 1040.', btn: 'Get Started', hint: 'Click any highlighted box to learn what it means' },
-  zh: { line1: '看不懂税单？', line2: '帮我读懂我的 1040。', btn: '开始', hint: '点击任意高亮格子了解它的含义' },
+  zh: { line1: '税单看不懂？', line2: '帮我读懂 1040。', btn: '开始', hint: '点击任意高亮格子了解它的含义' },
   es: { line1: '¿Todavía\u00a0confundido?', line2: 'Ayúdame a leer mi 1040.', btn: 'Comenzar', hint: 'Haz clic en cualquier casilla para ver su significado' }
 };
 
@@ -393,66 +428,407 @@ document.getElementById('backBtn').addEventListener('click', showWelcome);
 // ══════════════════════════════════════════════
 const IMG_W = 1700, IMG_H = 2200;
 let currentFormPage = 1;
-let activeBubble = null, activeBox = null;
+let activeBox = null;
+const liveBubbles = {}; // key: 'b0','b1','b2','b3'
 
+// ── sound helpers ─────────────────────────────────────────────────
+function playBloop() {
+  const s = document.getElementById('sndBloop');
+  s.currentTime = 0; s.volume = 0.5;
+  s.play().catch(()=>{});
+}
+function playPop() {
+  const s = document.getElementById('sndPop');
+  s.currentTime = 0; s.volume = 0.5;
+  s.play().catch(()=>{});
+}
+
+// ── multilingual content ──────────────────────────────────────────
+const HINT = {
+  en: 'Click any highlighted box\nto learn what it means',
+  zh: '点击任意高亮格子\n了解它的含义',
+  es: 'Haz clic en cualquier\ncasilla resaltada'
+};
+
+const SHORT = {
+  en: {
+    'filing-status': 'How you file — affects your tax rate & deduction.',
+    'digital-assets': 'Did you buy, sell, or receive crypto in 2025?',
+    'line-1a': 'W-2 wages — from Box 1 of your W-2.',
+    'line-1b': 'Wages paid to household employees not on W-2.',
+    'line-1c': 'Tip income not reported to your employer.',
+    'line-1d': 'Medicaid waiver payments not on W-2.',
+    'line-1e': 'Taxable employer-provided dependent care benefits.',
+    'line-1f': 'Employer adoption benefits above the tax-free limit.',
+    'line-1g': 'Wages from Form 8919 (misclassified workers).',
+    'line-1i': 'Military only: nontaxable combat pay election.',
+    'line-1z': 'Total of all wage lines (1a–1h).',
+    'line-2a': 'Tax-exempt interest (e.g. municipal bonds).',
+    'line-2b': 'Taxable interest from bank accounts, CDs, bonds.',
+    'line-3a': 'Qualified dividends — taxed at a lower rate.',
+    'line-3b': 'All ordinary dividends from stocks or funds.',
+    'line-4a': 'Total IRA withdrawals (gross amount).',
+    'line-4b': 'Taxable portion of your IRA withdrawal.',
+    'line-5a': 'Total pension, annuity, or 401(k) distributions.',
+    'line-5b': 'Taxable portion of your pension or 401(k).',
+    'line-6a': 'Total Social Security benefits received.',
+    'line-6b': 'Taxable portion of Social Security (up to 85%).',
+    'line-7a': 'Capital gains or losses from selling investments.',
+    'line-8': 'Other income from Schedule 1 (self-employment, rent…).',
+    'line-9': 'Grand total income before any deductions.',
+    'line-10': 'Above-the-line deductions that reduce your AGI.',
+    'line-11a': 'Adjusted Gross Income — the key number on your return.',
+    'line-11b': 'AGI carried over from Page 1.',
+    'line-12e': 'Standard or itemized deduction (whichever is larger).',
+    'line-13a': 'Qualified business income deduction (self-employed).',
+    'line-14': 'Total deductions subtracted from your AGI.',
+    'line-15': 'Taxable income — what your tax rate is applied to.',
+    'line-16': 'Federal income tax from the IRS tax table.',
+    'line-17': 'Additional taxes from Schedule 2 (e.g. AMT).',
+    'line-18': 'Total tax before credits.',
+    'line-19': 'Child tax credit — up to $2,000 per qualifying child.',
+    'line-20': 'Other credits from Schedule 3.',
+    'line-22': 'Tax remaining after all credits are applied.',
+    'line-23': 'Other taxes — mainly self-employment tax (15.3%).',
+    'line-24': 'Your total federal tax for the year.',
+    'line-25a': 'Federal tax withheld from W-2 wages.',
+    'line-25b': 'Federal tax withheld from 1099 income.',
+    'line-25d': 'Total federal tax withheld (25a + 25b + 25c).',
+    'line-26': 'Estimated tax payments made during the year.',
+    'line-27a': 'Earned Income Credit — refundable, for lower-income workers.',
+    'line-28': 'Additional Child Tax Credit — refundable portion.',
+    'line-29': 'American Opportunity Credit — up to $2,500 for college.',
+    'line-32': 'Total refundable credits and other payments.',
+    'line-33': 'Total payments: withholding + estimates + credits.',
+    'line-34': 'Amount overpaid (Line 33 minus Line 24).',
+    'line-35a': 'The refund amount sent to you.',
+    'line-37': 'Amount you still owe — due by filing deadline.',
+    'line-38': 'Penalty for underpaying taxes during the year.',
+  },
+  zh: {
+    'filing-status': '报税方式，影响税率和标准抵扣额。',
+    'digital-assets': '2025年是否买卖或收到加密货币？',
+    'line-1a': 'W-2工资，来自W-2表格的Box 1。',
+    'line-1b': '支付给家庭雇员但未出现在W-2上的工资。',
+    'line-1c': '未向雇主申报的小费收入。',
+    'line-1d': '未出现在W-2上的Medicaid豁免付款。',
+    'line-1e': '雇主提供的应税育儿福利超出免税限额的部分。',
+    'line-1f': '雇主资助的收养费用超出免税限额的部分。',
+    'line-1g': '被误分类为独立承包商的雇员工资（Form 8919）。',
+    'line-1i': '仅限军人：免税战斗补贴的自愿申报选项。',
+    'line-1z': '所有工资来源（1a至1h）的合计总额。',
+    'line-2a': '免联邦税的利息收入（如市政债券）。',
+    'line-2b': '须缴税的利息收入（来自银行存款、CD等）。',
+    'line-3a': '享受优惠税率的合格股息。',
+    'line-3b': '股票或基金派发的全部普通股息。',
+    'line-4a': '从IRA账户提取的总金额。',
+    'line-4b': 'IRA提款中须缴税的部分。',
+    'line-5a': '养老金、年金或401(k)的提款总额。',
+    'line-5b': '养老金或401(k)提款中须缴税的部分。',
+    'line-6a': '全年收到的社会安全福利总额。',
+    'line-6b': '社会安全福利中须缴税的部分（最高85%）。',
+    'line-7a': '出售股票、房产、加密货币等投资的盈亏。',
+    'line-8': '来自Schedule 1的其他收入（自雇、租金等）。',
+    'line-9': '所有收入来源合计，扣除前的总收入。',
+    'line-10': '"线上扣除"，直接减少AGI。',
+    'line-11a': '调整后总收入（AGI），计算税额的基础数字。',
+    'line-11b': '来自第一页的AGI，第二页计算的起点。',
+    'line-12e': '标准抵扣额或逐项抵扣额（两者取较大值）。',
+    'line-13a': '自雇或pass-through企业主的合格业务收入抵扣。',
+    'line-14': '总抵扣额（12e + 13a）。',
+    'line-15': '应税收入，税率级别以此为准。',
+    'line-16': '根据应税收入查税表所得的联邦所得税额。',
+    'line-17': '来自Schedule 2的额外税（如AMT）。',
+    'line-18': '抵税前的税额总计（16 + 17）。',
+    'line-19': '子女税收抵免，每个17岁以下子女最多$2,000。',
+    'line-20': '来自Schedule 3的其他抵税。',
+    'line-22': '扣除所有抵税后的实际税额。',
+    'line-23': '其他税，主要是自雇税（净自雇收入的15.3%）。',
+    'line-24': '全年应缴联邦税总额。',
+    'line-25a': '雇主从工资中代扣的联邦所得税（W-2 Box 2）。',
+    'line-25b': '1099收入中代扣的联邦税。',
+    'line-25d': '所有预扣税合计（25a + 25b + 25c）。',
+    'line-26': '全年自行缴纳的预估税款。',
+    'line-27a': '劳动所得抵免（EIC），低中收入工薪家庭可退税。',
+    'line-28': '附加子女税收抵免，可退税，每子女最多$1,700。',
+    'line-29': '美国机会教育抵免，每名学生最多$2,500。',
+    'line-32': '所有可退税抵免的合计。',
+    'line-33': '全部已缴税款合计。',
+    'line-34': '多缴金额（总已缴超过应缴的部分）。',
+    'line-35a': '申请退还给你的金额。',
+    'line-37': '还需补缴的税额，申报截止日前缴清。',
+    'line-38': '因全年预缴不足产生的罚款。',
+  }
+};
+// Spanish fallback = English for now
+SHORT.es = SHORT.en;
+
+const DETAIL = {
+  'filing-status': 'Single, Married Filing Jointly (MFJ), Married Filing Separately (MFS), Head of Household (HOH), or Qualifying Surviving Spouse. Most married couples file jointly to get the lowest tax.',
+  'digital-assets': 'Answer Yes if you sold crypto, received it as payment or reward, or exchanged it. Even small amounts count. A Yes answer likely means you need Schedule D.',
+  'line-1a': 'Your gross wages minus pre-tax deductions your employer withheld (like 401k or health insurance premiums). Most people\'s main income line.',
+  'line-1b': 'If you paid a nanny, housekeeper, or other household employee in cash without withholding, those wages go here.',
+  'line-1c': 'Tips you pocketed without telling your employer. All tips are taxable — your employer\'s Box 1 should already include the ones you reported.',
+  'line-1d': 'Certain Medicaid payments to family caregivers not on a W-2. Rare — most people leave this blank.',
+  'line-1e': 'From Form 2441 Line 26. If your dependent care FSA benefits exceeded the IRS limit, the excess is taxable here.',
+  'line-1f': 'From Form 8839. Employer adoption assistance above the tax-free threshold is taxable income.',
+  'line-1g': 'From Form 8919. If a company treated you as a contractor but you were legally an employee, those wages go here.',
+  'line-1i': 'Military members can elect to include nontaxable combat pay as earned income — sometimes this increases your Earned Income Credit.',
+  'line-1z': 'Add lines 1a through 1h. For most W-2 employees this equals 1a exactly.',
+  'line-2a': 'Municipal bond interest is reported here but NOT added to taxable income. Shown for informational purposes only.',
+  'line-2b': 'From Box 1 of your 1099-INT. Banks must send you this form if you earned more than $10 in interest.',
+  'line-3a': 'Dividends from US companies or qualified foreign corporations held long enough qualify for 0%, 15%, or 20% tax rates — much lower than ordinary income rates.',
+  'line-3b': 'From Box 1a of your 1099-DIV. Line 3a is a subset of this. The non-qualified portion (3b minus 3a) is taxed at your regular rate.',
+  'line-4a': 'From Box 1 of your 1099-R. This is the gross distribution — not necessarily what you owe tax on.',
+  'line-4b': 'Traditional IRA withdrawals are usually fully taxable. Roth IRA withdrawals are usually $0 here. Rollovers to another retirement account are also $0.',
+  'line-5a': 'From Box 1 of your 1099-R. Total amount received before any tax calculation.',
+  'line-5b': 'From Box 2a of your 1099-R. If you made after-tax contributions to a pension, part of each payment is tax-free.',
+  'line-6a': 'From Box 5 of your SSA-1099. This is the gross amount — Medicare premiums may have been deducted before you received it.',
+  'line-6b': 'If total income is low enough, $0 is taxable. Otherwise up to 50% or 85% may be taxable. The IRS worksheet calculates this.',
+  'line-7a': 'Attach Schedule D if required. Short-term gains (≤1 year) taxed as ordinary income. Long-term gains (>1 year) taxed at 0%, 15%, or 20%.',
+  'line-8': 'Flows from Schedule 1, Line 10. Includes self-employment income, alimony (pre-2019), rental income, gambling winnings, and more.',
+  'line-9': 'The sum of 1z + 2b + 3b + 4b + 5b + 6b + 7a + 8. Your income before any deductions.',
+  'line-10': 'From Schedule 1, Line 26. Common above-the-line deductions: student loan interest, traditional IRA contributions, self-employed health insurance.',
+  'line-11a': 'Line 9 minus Line 10. The lower your AGI, the more you may qualify for credits and deductions. Many phase-outs are tied to this number.',
+  'line-11b': 'Same as Line 11a from Page 1. The starting point for the Page 2 deduction and tax calculations.',
+  'line-12e': '$15,750 (Single/MFS), $31,500 (MFJ/QSS), $23,625 (HOH) for 2025. If you itemize on Schedule A and it exceeds your standard deduction, use that instead.',
+  'line-13a': 'From Form 8995 or 8995-A. Owners of sole proprietorships, S-corps, partnerships, and some trusts may deduct up to 20% of qualified business income.',
+  'line-14': 'Line 12e + 13a + 13b. Total amount subtracted from your AGI.',
+  'line-15': 'Line 11b minus Line 14. If zero or less, enter 0. This is what your tax is actually computed on.',
+  'line-16': 'From the IRS tax tables or Tax Computation Worksheet. Based entirely on your Line 15 taxable income and filing status.',
+  'line-17': 'From Schedule 2, Line 3. Includes Alternative Minimum Tax (AMT). Most middle-income filers owe $0 here.',
+  'line-18': 'Line 16 + Line 17. Your tax before any credits chip away at it.',
+  'line-19': 'From Schedule 8812. Up to $2,000 per qualifying child under 17. Phases out above $200K (single) or $400K (MFJ).',
+  'line-20': 'From Schedule 3, Line 8. Includes foreign tax credit, education credits, retirement savings credit, EV credit, and more.',
+  'line-22': 'Line 18 minus Line 21. If zero or less, enter 0. You still may owe self-employment or other taxes on Line 23.',
+  'line-23': 'From Schedule 2, Line 21. Self-employment tax is 15.3% on net SE income. Also includes net investment income tax (3.8%) for high earners.',
+  'line-24': 'Line 22 + Line 23. This is the total you owe — now compare it to what you already paid.',
+  'line-25a': 'From Box 2 of your W-2. This is tax your employer already sent to the IRS on your behalf throughout the year.',
+  'line-25b': 'Backup withholding or voluntary withholding on 1099 income. From the federal tax withheld box on your 1099 forms.',
+  'line-25d': 'Lines 25a + 25b + 25c. The total the IRS already has from you via withholding.',
+  'line-26': 'Quarterly payments (April, June, September, January) made directly to IRS. Plus any overpayment you rolled over from 2024.',
+  'line-27a': '"Refundable" means it can give you money back even if you owe no tax. One of the most valuable credits — worth up to ~$7,800 for families with 3+ children in 2025.',
+  'line-28': 'From Schedule 8812. Up to $1,700 per child is refundable in 2025 — meaning you get it back as cash even if your tax is $0.',
+  'line-29': 'From Form 8863. 40% ($1,000) is refundable. Must be for the first 4 years of post-secondary education. Income limits apply.',
+  'line-32': 'Lines 27a + 28 + 29 + 30 + 31. These credits can all generate a refund regardless of how much tax you owe.',
+  'line-33': 'Lines 25d + 26 + 32. Everything counted in your favor.',
+  'line-34': 'Line 33 minus Line 24 (when 33 > 24). You can choose to get this refunded (Line 35a) or applied to next year (Line 36).',
+  'line-35a': 'The portion of your overpayment you want refunded. For direct deposit, fill in Lines 35b–35d with your routing and account numbers.',
+  'line-37': 'Line 24 minus Line 33 (when 24 > 33). Pay by April 15 to avoid interest. You can pay at irs.gov/payments by card, bank transfer, or check.',
+  'line-38': 'Generally applies if you owed more than $1,000 AND paid less than 90% of this year\'s tax or 100% of last year\'s tax during the year.',
+};
+
+const DETAIL_ZH = {
+  'filing-status': '单身、夫妻联合申报（MFJ）、夫妻分开申报（MFS）、户主（HOH）或符合条件的幸存配偶。大多数已婚夫妇选择联合申报以获得最低税率。',
+  'digital-assets': '出售加密货币、收到它作为报酬或奖励、或进行兑换，均需回答"是"。即使金额很小也算。回答"是"通常需要填写Schedule D。',
+  'line-1a': '工资总额减去雇主代扣的税前福利（如401k或医疗保险）。大多数人收入的主要来源。',
+  'line-1b': '若你雇用了保姆或家政以现金支付但未扣税，这些工资填写在这里。',
+  'line-1c': '收到但未告知雇主的小费。所有小费都须缴税——已向雇主申报的小费应已包含在W-2的Box 1中。',
+  'line-1d': '支付给家庭护理人员的某些Medicaid款项，未出现在W-2上。较为罕见，大多数人留空。',
+  'line-1e': '来自Form 2441第26行。育儿FSA福利超过IRS限额的部分在此申报为应税收入。',
+  'line-1f': '来自Form 8839。雇主支付的收养费用超出免税限额的部分为应税收入。',
+  'line-1g': '来自Form 8919。若公司将你当作独立承包商但你实际应为雇员，这些工资填写在这里。',
+  'line-1i': '军人可选择将免税战斗补贴计入收入——有时可提高劳动所得抵免（EIC）金额。',
+  'line-1z': '1a至1h的总和。对于普通W-2雇员，这通常等于1a。',
+  'line-2a': '市政债券利息在这里申报，但不计入应税收入，仅供参考。',
+  'line-2b': '来自1099-INT的Box 1。银行利息超过$10须向IRS申报。',
+  'line-3a': '来自合格公司且持有足够时间的股息，享受0%、15%或20%的优惠税率。',
+  'line-3b': '来自1099-DIV的Box 1a。3a是其中一部分，非合格部分按普通税率征税。',
+  'line-4a': '来自1099-R的Box 1，是提款总额，不一定全部须缴税。',
+  'line-4b': '传统IRA提款通常全额应税；Roth IRA提款通常免税（此处为$0）；账户间转移也为$0。',
+  'line-5a': '来自1099-R的Box 1，收到的总金额，在计算税额之前。',
+  'line-5b': '来自1099-R的Box 2a。若你曾缴纳税后资金，每次付款的一部分可能免税。',
+  'line-6a': '来自SSA-1099的Box 5，是总金额，Medicare保费可能已从实收金额中扣除。',
+  'line-6b': '总收入足够低则为$0；否则最多50%或85%可能须缴税，由IRS工作表计算。',
+  'line-7a': '需要时附Schedule D。持有≤1年的短期收益按普通税率征税；持有>1年的长期收益税率为0%、15%或20%。',
+  'line-8': '来自Schedule 1第10行，包括自雇收入、租金收入、赌博收益等。',
+  'line-9': '1z+2b+3b+4b+5b+6b+7a+8的总和，任何抵扣前的总收入。',
+  'line-10': '来自Schedule 1第26行。常见抵扣：学生贷款利息、传统IRA供款、自雇健康保险。',
+  'line-11a': '第9行减去第10行。AGI越低，可获得的抵免越多，许多福利的逐步取消都与此数字挂钩。',
+  'line-11b': '与第一页第11a相同，是第二页计算的起点。',
+  'line-12e': '2025年标准抵扣：单身$15,750，夫妻联合$31,500，户主$23,625。若Schedule A更高则使用逐项抵扣。',
+  'line-13a': '来自Form 8995或8995-A。独资、S-corp、合伙企业等业主最多可抵扣20%合格业务收入。',
+  'line-14': '第12e + 13a + 13b，从AGI中减去的总金额。',
+  'line-15': '第11b减去第14行，如为零或负数则填0，税额就是根据这个数字计算的。',
+  'line-16': '来自IRS税表，完全基于应税收入和申报身份。',
+  'line-17': '来自Schedule 2第3行，包括替代性最低税（AMT）。大多数中等收入申报人此处为$0。',
+  'line-18': '第16加第17行，应用所有抵税额之前的税额总计。',
+  'line-19': '来自Schedule 8812。每个17岁以下子女最多$2,000，收入超过$200K（单身）或$400K（MFJ）后逐步取消。',
+  'line-20': '来自Schedule 3第8行，包括外国税收抵免、教育抵免、退休储蓄抵免、电动汽车抵免等。',
+  'line-22': '第18减去第21行，如为零或负数则填0。可能仍需在第23行缴纳自雇税。',
+  'line-23': '来自Schedule 2第21行。自雇税为净自雇收入的15.3%，高收入者还需缴纳3.8%净投资收益税。',
+  'line-24': '第22加第23行，全年应缴联邦税总额，现在与已缴金额对比。',
+  'line-25a': '来自W-2的Box 2，雇主全年代扣并汇给IRS的税款。',
+  'line-25b': '1099收入的预扣税，来自各1099表格的联邦税预扣栏。',
+  'line-25d': '第25a + 25b + 25c，IRS已通过预扣税收到的总金额。',
+  'line-26': '每季度直接向IRS缴纳的税款，加上从2024年结转的超缴金额。',
+  'line-27a': '"可退税"意味着即使不欠税也能获得退款。2025年有3个以上子女的家庭最高约$7,800。',
+  'line-28': '来自Schedule 8812。2025年每个子女最多$1,700可退税，即使税额为$0也能退回。',
+  'line-29': '来自Form 8863，40%（$1,000）可退税，适用于大学前四年，有收入限制。',
+  'line-32': '第27a+28+29+30+31，所有可退税抵免均可产生退款。',
+  'line-33': '第25d+26+32，所有对你有利的金额总计。',
+  'line-34': '第33减去第24行（当33>24时），可选择退款或转入下一年。',
+  'line-35a': '希望退还给自己的超缴金额，直接存款需填写路由号和账号。',
+  'line-37': '第24减去第33行（当24>33时），需在4月15日前缴清，可在irs.gov/payments缴纳。',
+  'line-38': '适用条件：全年欠税超过$1,000，且预缴不足本年税额90%或上年税额100%。',
+};
+const DETAIL_ES = DETAIL; // Spanish uses English detail for now
+
+function getDetail(id) {
+  if (currentLang === 'zh') return DETAIL_ZH[id] || DETAIL[id] || 'More details coming soon.';
+  return DETAIL[id] || 'More details coming soon.';
+}
+
+// ── bubble positioning ────────────────────────────────────────────
+
+function bblPos(slot, size) {
+  const vh = window.innerHeight;
+  // 右侧泡泡用right定位，避免超出
+  const rightSlots = { topRight: true, bottomRight: true, midRight: true };
+  if (rightSlots[slot]) {
+    const right = 24;
+    const tops = {
+      topRight:    100,
+      bottomRight: vh - size - 40,
+      midRight:    Math.max(100, (vh - size) / 2),
+    };
+    return { right, top: tops[slot], useRight: true };
+  }
+  // 左侧泡泡
+  const tops = {
+    topLeft:    160,
+    bottomLeft: vh - size - 40,
+  };
+  return { left: 80, top: tops[slot] || 160, useRight: false };
+}
+
+function makeBubble(key, slot, sizeClass, text, isClickable, onClick) {
+  dismissBubble(key, false);
+  const size = sizeClass === 'sz-sm' ? 160 : sizeClass === 'sz-md' ? 210 : 360;
+  const pos = bblPos(slot, size);
+
+  const el = document.createElement('div');
+  el.className = `bbl ${sizeClass} in`;
+  if (pos.useRight) {
+    el.style.cssText = `right:${pos.right}px; top:${pos.top}px;`;
+  } else {
+    el.style.cssText = `left:${pos.left}px; top:${pos.top}px;`;
+  }
+  el.innerHTML = `<img class="bbl-img" src="bubble.png" alt=""><span class="bbl-text${isClickable ? ' clickable' : ''}">${text}</span>`;
+
+  if (isClickable && onClick) {
+    el.querySelector('.bbl-text').addEventListener('click', e => { e.stopPropagation(); onClick(); });
+  }
+
+  document.body.appendChild(el);
+  liveBubbles[key] = el;
+  playBloop();
+  return el;
+}
+
+function dismissBubble(key, withSound = true) {
+  const el = liveBubbles[key];
+  if (!el) return;
+  if (withSound) playPop();
+  el.classList.remove('in');
+  el.classList.add('out');
+  setTimeout(() => { el.remove(); }, 400);
+  delete liveBubbles[key];
+}
+
+function dismissAll(withSound = false) {
+  Object.keys(liveBubbles).forEach(k => dismissBubble(k, withSound));
+  if (activeBox) { activeBox.classList.remove('active'); activeBox = null; }
+}
+
+// ── show bubble sequence ──────────────────────────────────────────
+function showBoxBubbles(b) {
+  dismissAll(true);
+  activeBox && activeBox.classList.remove('active');
+
+  // b1: one-liner, top-left
+  const shortText = (SHORT[currentLang] || SHORT.en)[b.id] || SHORT.en[b.id] || b.tag;
+  makeBubble('b1', 'topLeft', 'sz-md', shortText, false, null);
+
+  // b2: tell me more, bottom-right
+  const moreLbl = currentLang === 'zh' ? '了解更多 →' : currentLang === 'es' ? 'Más info →' : 'Tell me more →';
+  makeBubble('b2', 'bottomRight', 'sz-sm', moreLbl, true, () => {
+    dismissBubble('b0', true);
+    dismissBubble('b2', true);
+    // b3: detail, mid-right
+    const detail = getDetail(b.id);
+    setTimeout(() => {
+      makeBubble('b3', 'midRight', 'sz-lg', detail, false, null);
+    }, 200);
+  });
+}
+
+function showB0() {
+  if (!document.getElementById('viewForm').classList.contains('visible')) return;
+  const hintText = HINT[currentLang] || HINT.en;
+  makeBubble('b0', 'topRight', 'sz-md', hintText, false, null);
+}
+
+// ── box coordinate data ───────────────────────────────────────────
 const P1 = [
-  { id:'filing-status', x:95, y:568, w:1510, h:204, tag:'Filing Status', title:'Filing Status', body:'How you file your taxes. Single, Married Filing Jointly (MFJ), Married Filing Separately (MFS), Head of Household (HOH), or Qualifying Surviving Spouse. This affects your tax bracket and standard deduction. Most married couples file jointly to minimize their total tax bill.' },
-  { id:'digital-assets', x:95, y:774, w:1510, h:51, tag:'Digital Assets', title:'Digital Assets (Crypto)', body:'Did you receive, sell, or exchange cryptocurrency or other digital assets in 2025? Even small transactions count. Answer Yes if you sold crypto for a profit or loss, received it as payment, or received it as a reward. If Yes, you\'ll likely need Schedule D.' },
-  { id:'line-1a', x:1400, y:1250, w:200, h:33, tag:'Line 1a · Income', title:'Line 1a — W-2 Wages', body:'Your total wages, salary, and tips from all W-2 jobs. This comes directly from Box 1 of your W-2 form. It\'s your gross pay minus any pre-tax deductions your employer took out (like 401k contributions or health insurance premiums).' },
-  { id:'line-1b', x:1400, y:1283, w:200, h:33, tag:'Line 1b · Income', title:'Line 1b — Household Employee Wages', body:'Wages paid to a household employee (like a nanny or housekeeper) that weren\'t reported on a W-2. Most people leave this blank. If you employed household workers and paid them in cash, this is where to report it.' },
-  { id:'line-1c', x:1400, y:1317, w:200, h:33, tag:'Line 1c · Income', title:'Line 1c — Tip Income Not on W-2', body:'Tips you received but didn\'t report to your employer. All tip income is taxable. If your employer included your tips in Box 1 of your W-2, this is $0. Only enter tips your employer doesn\'t already know about.' },
-  { id:'line-1d', x:1400, y:1350, w:200, h:33, tag:'Line 1d · Income', title:'Line 1d — Medicaid Waiver Payments', body:'Certain Medicaid waiver payments for care of a disabled person in your home that are not reported on a W-2 but are still taxable income. Most people leave this blank. Relevant mainly to family caregivers who receive Medicaid payments.' },
-  { id:'line-1e', x:1400, y:1383, w:200, h:33, tag:'Line 1e · Income', title:'Line 1e — Dependent Care Benefits', body:'Taxable dependent care benefits from your employer (like a dependent care FSA). This comes from Form 2441 Line 26. If your employer-provided dependent care benefits exceed the IRS limit, the excess is taxable and goes here.' },
-  { id:'line-1f', x:1400, y:1417, w:200, h:33, tag:'Line 1f · Income', title:'Line 1f — Adoption Benefits', body:'Employer-provided adoption assistance benefits reported on Form 8839. If your employer helped pay for an adoption, amounts above the tax-free limit are taxable income reported here.' },
-  { id:'line-1g', x:1400, y:1450, w:200, h:33, tag:'Line 1g · Income', title:'Line 1g — Wages from Form 8919', body:'Wages for workers who were misclassified as independent contractors but should have been employees. If you filed Form 8919 to report uncollected Social Security and Medicare taxes, those wages flow to this line.' },
-  { id:'line-1i', x:1140, y:1513, w:200, h:33, tag:'Line 1i · Income', title:'Line 1i — Nontaxable Combat Pay Election', body:'For military members only. Nontaxable combat pay is normally excluded from income, but you can elect to include it — this can increase your Earned Income Credit if it results in a higher credit. Most non-military filers leave this blank.' },
-  { id:'line-1z', x:1400, y:1550, w:200, h:33, tag:'Line 1z · Income', title:'Line 1z — Total Wages', body:'The sum of all wage lines (1a through 1h). For most people who have a regular W-2 job, this equals Line 1a. It only differs if you had household employees, unreported tips, or other special wage situations.' },
-  { id:'line-2a', x:700, y:1580, w:197, h:33, tag:'Line 2a · Income', title:'Line 2a — Tax-Exempt Interest', body:'Interest income that is NOT taxed by the federal government — typically from municipal bonds. You still report it here (for informational purposes), but it doesn\'t add to your taxable income. Your bank sends a 1099-INT showing this.' },
-  { id:'line-2b', x:1400, y:1583, w:200, h:33, tag:'Line 2b · Income', title:'Line 2b — Taxable Interest', body:'Interest income that IS taxed — from bank savings accounts, CDs, Treasury bonds, etc. Your bank reports this on a 1099-INT. If you earned more than $10 in interest, you\'ll receive this form. This amount gets added to your total income.' },
-  { id:'line-3a', x:700, y:1617, w:197, h:33, tag:'Line 3a · Income', title:'Line 3a — Qualified Dividends', body:'A subset of your ordinary dividends that qualify for a lower tax rate (0%, 15%, or 20% depending on your income). These are dividends from US companies or qualified foreign corporations held long enough. Your 1099-DIV will separate these out.' },
-  { id:'line-3b', x:1400, y:1617, w:200, h:33, tag:'Line 3b · Income', title:'Line 3b — Ordinary Dividends', body:'Total dividends paid to you from stocks or mutual funds. This comes from Box 1a of your 1099-DIV. Line 3a (qualified dividends) is a portion of this amount. The difference between 3b and 3a is taxed at your regular income tax rate.' },
-  { id:'line-4a', x:700, y:1683, w:197, h:33, tag:'Line 4a · Income', title:'Line 4a — Total IRA Distributions', body:'The gross amount you withdrew from an IRA (Traditional or Roth). From Box 1 of your 1099-R. This is the total amount distributed — not necessarily the amount you owe tax on. The taxable portion goes to Line 4b.' },
-  { id:'line-4b', x:1400, y:1681, w:200, h:33, tag:'Line 4b · Income', title:'Line 4b — Taxable IRA Amount', body:'The portion of your IRA withdrawal that\'s subject to income tax. Traditional IRA withdrawals are usually fully taxable. Roth IRA withdrawals are usually tax-free (Line 4b = $0). If you rolled money to another retirement account, this may also be $0.' },
-  { id:'line-5a', x:700, y:1747, w:197, h:33, tag:'Line 5a · Income', title:'Line 5a — Total Pension & Annuity', body:'The gross amount you received from pensions, annuities, or 401(k) distributions. From Box 1 of your 1099-R. Like Line 4a, this is the total — not all of it may be taxable. The taxable portion is on Line 5b.' },
-  { id:'line-5b', x:1400, y:1750, w:200, h:33, tag:'Line 5b · Income', title:'Line 5b — Taxable Pension Amount', body:'The taxable portion of your pension or 401(k) distribution. From Box 2a of your 1099-R. If you made after-tax contributions to your pension, part of each payment is tax-free (return of your investment) and part is taxable.' },
-  { id:'line-6a', x:700, y:1817, w:197, h:33, tag:'Line 6a · Income', title:'Line 6a — Total Social Security Benefits', body:'The total Social Security benefits you received for the year, shown in Box 5 of your SSA-1099. This is the gross amount before Medicare premiums were deducted. Not all of this will be taxable — that depends on your other income.' },
-  { id:'line-6b', x:1400, y:1817, w:200, h:33, tag:'Line 6b · Income', title:'Line 6b — Taxable Social Security', body:'The portion of Social Security benefits subject to federal tax. Depending on your total income: if it\'s low enough, $0 is taxable. Otherwise, up to 50% or 85% may be taxable. If Social Security is your only income, it\'s almost always $0 here.' },
-  { id:'line-7a', x:1400, y:1917, w:200, h:33, tag:'Line 7a · Income', title:'Line 7a — Capital Gain or (Loss)', body:'Profit or loss from selling investments: stocks, ETFs, real estate, crypto, etc. If you sold investments, attach Schedule D. Short-term gains (held ≤1 year) are taxed as ordinary income. Long-term gains (held >1 year) get preferential rates of 0%, 15%, or 20%.' },
-  { id:'line-8', x:1400, y:1983, w:200, h:33, tag:'Line 8 · Income', title:'Line 8 — Additional Income (Schedule 1)', body:'Other income that doesn\'t fit the lines above — things like self-employment income, alimony received (pre-2019 divorces), rental income, gambling winnings, prizes, and more. All reported on Schedule 1, which feeds into this line.' },
-  { id:'line-9', x:1400, y:2017, w:200, h:33, tag:'Line 9 · Income', title:'Line 9 — Total Income', body:'The grand total of everything: wages + interest + dividends + retirement + Social Security + capital gains + other income. This is your income before any "above-the-line" deductions. It\'s the starting point for calculating your tax.' },
-  { id:'line-10', x:1400, y:2050, w:200, h:33, tag:'Line 10 · Adjustments', title:'Line 10 — Adjustments to Income', body:'Deductions you can take regardless of whether you itemize — sometimes called "above-the-line" deductions. Common examples: student loan interest, contributions to a Traditional IRA, self-employed health insurance, alimony paid (pre-2019). From Schedule 1.' },
-  { id:'line-11a', x:1400, y:2083, w:200, h:33, tag:'Line 11a · AGI', title:'Line 11a — Adjusted Gross Income (AGI)', body:'Line 9 minus Line 10. AGI is one of the most important numbers on your return — it\'s the basis for calculating many credits and deductions. A lower AGI can mean more eligibility for education credits, IRA deductions, medical deductions, and more.' },
+  { id:'filing-status', x:95, y:568, w:1510, h:204 },
+  { id:'digital-assets', x:95, y:774, w:1510, h:51 },
+  { id:'line-1a', x:1400, y:1250, w:200, h:33 },
+  { id:'line-1b', x:1400, y:1283, w:200, h:33 },
+  { id:'line-1c', x:1400, y:1317, w:200, h:33 },
+  { id:'line-1d', x:1400, y:1350, w:200, h:33 },
+  { id:'line-1e', x:1400, y:1383, w:200, h:33 },
+  { id:'line-1f', x:1400, y:1417, w:200, h:33 },
+  { id:'line-1g', x:1400, y:1450, w:200, h:33 },
+  { id:'line-1i', x:1140, y:1513, w:200, h:33 },
+  { id:'line-1z', x:1400, y:1550, w:200, h:33 },
+  { id:'line-2a', x:700,  y:1580, w:197, h:33 },
+  { id:'line-2b', x:1400, y:1583, w:200, h:33 },
+  { id:'line-3a', x:700,  y:1617, w:197, h:33 },
+  { id:'line-3b', x:1400, y:1617, w:200, h:33 },
+  { id:'line-4a', x:700,  y:1683, w:197, h:33 },
+  { id:'line-4b', x:1400, y:1681, w:200, h:33 },
+  { id:'line-5a', x:700,  y:1747, w:197, h:33 },
+  { id:'line-5b', x:1400, y:1750, w:200, h:33 },
+  { id:'line-6a', x:700,  y:1817, w:197, h:33 },
+  { id:'line-6b', x:1400, y:1817, w:200, h:33 },
+  { id:'line-7a', x:1400, y:1917, w:200, h:33 },
+  { id:'line-8',  x:1400, y:1983, w:200, h:33 },
+  { id:'line-9',  x:1400, y:2017, w:200, h:33 },
+  { id:'line-10', x:1400, y:2050, w:200, h:33 },
+  { id:'line-11a',x:1400, y:2083, w:200, h:33 },
 ];
 
 const P2 = [
-  { id:'line-11b', x:1400, y:100, w:200, h:33, tag:'Line 11b · Tax & Credits', title:'Line 11b — Adjusted Gross Income (from Page 1)', body:'This is just Line 11a carried over from Page 1 — your Adjusted Gross Income. It\'s the starting point for Page 2 calculations.' },
-  { id:'line-12e', x:1400, y:267, w:200, h:33, tag:'Line 12e · Deductions', title:'Line 12e — Standard or Itemized Deduction', body:'Either your standard deduction (a fixed amount based on filing status: $15,750 Single, $31,500 MFJ, $23,625 HOH for 2025) or your itemized deductions from Schedule A, whichever is larger. Most people take the standard deduction.' },
-  { id:'line-13a', x:1400, y:300, w:200, h:33, tag:'Line 13a · Deductions', title:'Line 13a — Qualified Business Income Deduction', body:'Self-employed people and owners of pass-through businesses (S-corps, partnerships, sole proprietors) may deduct up to 20% of their qualified business income. Calculated on Form 8995. If you only have W-2 income, this is $0.' },
-  { id:'line-14', x:1400, y:367, w:200, h:33, tag:'Line 14 · Deductions', title:'Line 14 — Total Deductions', body:'The sum of Line 12e and Line 13a. This is the total amount subtracted from your AGI to arrive at your taxable income.' },
-  { id:'line-15', x:1400, y:400, w:200, h:33, tag:'Line 15 · Tax', title:'Line 15 — Taxable Income', body:'Line 11b minus Line 14. This is the income your tax is actually calculated on. It\'s almost always less than your AGI because deductions reduce it. Your tax bracket is based on this number.' },
-  { id:'line-16', x:1400, y:433, w:200, h:33, tag:'Line 16 · Tax', title:'Line 16 — Tax', body:'The actual federal income tax on your taxable income, calculated from the IRS tax tables or tax rate schedules. This is your base tax before any credits or additional taxes are added.' },
-  { id:'line-17', x:1400, y:467, w:200, h:33, tag:'Line 17 · Tax', title:'Line 17 — Additional Tax (Schedule 2)', body:'Additional taxes from Schedule 2, such as Alternative Minimum Tax (AMT). Most middle-income filers aren\'t affected by AMT. This is $0 for most people.' },
-  { id:'line-18', x:1400, y:500, w:200, h:33, tag:'Line 18 · Tax', title:'Line 18 — Total Tax Before Credits', body:'Lines 16 + 17. Your total tax liability before any credits reduce it.' },
-  { id:'line-19', x:1400, y:533, w:200, h:33, tag:'Line 19 · Credits', title:'Line 19 — Child Tax Credit', body:'Up to $2,000 per qualifying child under age 17. Reduces your tax dollar-for-dollar. To get the full credit your income must be below $200,000 (single) or $400,000 (married). From Schedule 8812.' },
-  { id:'line-20', x:1400, y:567, w:200, h:33, tag:'Line 20 · Credits', title:'Line 20 — Other Credits (Schedule 3)', body:'Additional credits from Schedule 3: education credits, foreign tax credit, retirement savings credit, clean energy credits, and more. Each credit reduces your tax dollar-for-dollar.' },
-  { id:'line-22', x:1400, y:633, w:200, h:33, tag:'Line 22 · Tax', title:'Line 22 — Tax After Credits', body:'Line 18 minus Line 21. Your tax after all credits have been applied. If this is $0 or less, you owe no income tax (though you may still owe self-employment tax or other taxes).' },
-  { id:'line-23', x:1400, y:667, w:200, h:33, tag:'Line 23 · Other Taxes', title:'Line 23 — Other Taxes', body:'Other taxes not included above — mainly self-employment tax (15.3% on net self-employment income). Also includes household employment taxes, additional Medicare tax on high earners, and net investment income tax.' },
-  { id:'line-24', x:1400, y:700, w:200, h:33, tag:'Line 24 · Tax', title:'Line 24 — Total Tax', body:'Your grand total federal tax liability for the year. This is what you actually owe — before subtracting what you\'ve already paid through withholding or estimated payments.' },
-  { id:'line-25a', x:1140, y:767, w:198, h:33, tag:'Line 25a · Payments', title:'Line 25a — Federal Tax Withheld (W-2)', body:'Federal income tax your employer withheld from your paychecks, shown in Box 2 of your W-2. This is money you already paid toward your tax bill throughout the year.' },
-  { id:'line-25b', x:1140, y:800, w:198, h:33, tag:'Line 25b · Payments', title:'Line 25b — Federal Tax Withheld (1099)', body:'Federal income tax withheld from non-wage income — freelance payments, retirement distributions, gambling winnings, etc. Shown in the federal tax withheld box of your 1099 forms.' },
-  { id:'line-25d', x:1400, y:867, w:200, h:33, tag:'Line 25d · Payments', title:'Line 25d — Total Federal Tax Withheld', body:'The sum of all federal income tax withheld (Lines 25a + 25b + 25c). This is the total you\'ve already pre-paid to the IRS during the year.' },
-  { id:'line-26', x:1400, y:900, w:200, h:33, tag:'Line 26 · Payments', title:'Line 26 — Estimated Tax Payments', body:'Quarterly estimated tax payments you made directly to the IRS during 2025, plus any overpayment you applied from your 2024 return. Self-employed people and investors often make these payments to avoid underpayment penalties.' },
-  { id:'line-27a', x:1140, y:1000, w:198, h:33, tag:'Line 27a · Credits', title:'Line 27a — Earned Income Credit (EIC)', body:'A refundable credit for low-to-moderate income workers, especially those with children. "Refundable" means it can reduce your tax below zero and result in a refund even if you owe no tax. One of the most valuable credits for eligible filers.' },
-  { id:'line-28', x:1140, y:1133, w:198, h:33, tag:'Line 28 · Credits', title:'Line 28 — Additional Child Tax Credit', body:'The refundable portion of the Child Tax Credit. If your Child Tax Credit (Line 19) exceeds your tax liability, you may get up to $1,700 per child back as a refund through this credit. From Schedule 8812.' },
-  { id:'line-29', x:1140, y:1167, w:198, h:33, tag:'Line 29 · Credits', title:'Line 29 — American Opportunity Credit', body:'A refundable education credit worth up to $2,500 per student for the first 4 years of college. 40% ($1,000) is refundable. Requires Form 8863. Income limits apply.' },
-  { id:'line-32', x:1400, y:1267, w:200, h:33, tag:'Line 32 · Payments', title:'Line 32 — Total Other Payments & Refundable Credits', body:'Sum of EIC, Additional Child Tax Credit, American Opportunity Credit, and other refundable credits. These can all generate a refund even if you owe no tax.' },
-  { id:'line-33', x:1400, y:1300, w:200, h:33, tag:'Line 33 · Payments', title:'Line 33 — Total Payments', body:'Everything you\'ve paid: withholding (25d) + estimated payments (26) + refundable credits (32). This is the total credited toward your tax bill.' },
-  { id:'line-34', x:1400, y:1333, w:200, h:33, tag:'Line 34 · Refund', title:'Line 34 — Amount Overpaid', body:'If Line 33 (total payments) is more than Line 24 (total tax), you overpaid. This is your total overpayment — you can get it refunded or apply it to next year\'s taxes.' },
-  { id:'line-35a', x:1400, y:1367, w:200, h:33, tag:'Line 35a · Refund', title:'Line 35a — Refund Amount', body:'The portion of your overpayment you want refunded to you. This is what hits your bank account or comes as a check. If you split your refund, use Form 8888.' },
-  { id:'line-37', x:1400, y:1530, w:200, h:33, tag:'Line 37 · Amount Owed', title:'Line 37 — Amount You Owe', body:'If Line 33 (total payments) is less than Line 24 (total tax), you owe the difference. This must be paid by the April filing deadline to avoid interest and penalties. You can pay at irs.gov/payments.' },
-  { id:'line-38', x:1140, y:1567, w:200, h:33, tag:'Line 38 · Penalty', title:'Line 38 — Estimated Tax Penalty', body:'A penalty if you didn\'t pay enough tax throughout the year via withholding or estimated payments. Generally applies if you owe more than $1,000 and paid less than 90% of this year\'s tax or 100% of last year\'s tax.' },
+  { id:'line-11b', x:1400, y:100,  w:200, h:33 },
+  { id:'line-12e', x:1400, y:267,  w:200, h:33 },
+  { id:'line-13a', x:1400, y:300,  w:200, h:33 },
+  { id:'line-14',  x:1400, y:367,  w:200, h:33 },
+  { id:'line-15',  x:1400, y:400,  w:200, h:33 },
+  { id:'line-16',  x:1400, y:433,  w:200, h:33 },
+  { id:'line-17',  x:1400, y:467,  w:200, h:33 },
+  { id:'line-18',  x:1400, y:500,  w:200, h:33 },
+  { id:'line-19',  x:1400, y:533,  w:200, h:33 },
+  { id:'line-20',  x:1400, y:567,  w:200, h:33 },
+  { id:'line-22',  x:1400, y:633,  w:200, h:33 },
+  { id:'line-23',  x:1400, y:667,  w:200, h:33 },
+  { id:'line-24',  x:1400, y:700,  w:200, h:33 },
+  { id:'line-25a', x:1140, y:767,  w:198, h:33 },
+  { id:'line-25b', x:1140, y:800,  w:198, h:33 },
+  { id:'line-25d', x:1400, y:867,  w:200, h:33 },
+  { id:'line-26',  x:1400, y:900,  w:200, h:33 },
+  { id:'line-27a', x:1140, y:1000, w:198, h:33 },
+  { id:'line-28',  x:1140, y:1133, w:198, h:33 },
+  { id:'line-29',  x:1140, y:1167, w:198, h:33 },
+  { id:'line-32',  x:1400, y:1267, w:200, h:33 },
+  { id:'line-33',  x:1400, y:1300, w:200, h:33 },
+  { id:'line-34',  x:1400, y:1333, w:200, h:33 },
+  { id:'line-35a', x:1400, y:1367, w:200, h:33 },
+  { id:'line-37',  x:1400, y:1530, w:200, h:33 },
+  { id:'line-38',  x:1140, y:1567, w:200, h:33 },
 ];
 
+// ── render ────────────────────────────────────────────────────────
 function render(boxes) {
   const layer = document.getElementById('hotspots');
   layer.innerHTML = '';
@@ -464,36 +840,29 @@ function render(boxes) {
     const el = document.createElement('div');
     el.className = 'hbox';
     el.style.cssText = `left:${b.x*scaleX}px;top:${b.y*scaleY}px;width:${b.w*scaleX}px;height:${b.h*scaleY}px;`;
-    el.addEventListener('click', e => { e.stopPropagation(); showBubble(b, el, scaleX, scaleY); });
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (activeBox === el) { dismissAll(true); return; }
+      activeBox = el; el.classList.add('active');
+      showBoxBubbles(b);
+    });
     layer.appendChild(el);
   });
+  // show b0 hint after card rises
+  setTimeout(showB0, 900);
 }
 
-function showBubble(b, boxEl, scaleX, scaleY) {
-  closeBubble();
-  boxEl.classList.add('active');
-  activeBox = boxEl;
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble on';
-  bubble.innerHTML = `<span class="bubble-x">×</span><div class="bubble-tag">${b.tag}</div><div class="bubble-title">${b.title}</div><div class="bubble-body">${b.body}</div>`;
-  const bx = b.x*scaleX, by = b.y*scaleY, bw = b.w*scaleX;
-  let left = bx - 278; if (left < 4) left = bx + bw + 10;
-  let top = by - 16; if (top < 0) top = 4;
-  bubble.style.cssText = `left:${left}px;top:${top}px;`;
-  document.getElementById('hotspots').appendChild(bubble);
-  activeBubble = bubble;
-  bubble.querySelector('.bubble-x').addEventListener('click', e => { e.stopPropagation(); closeBubble(); });
-}
-
-function closeBubble() {
-  if (activeBubble) { activeBubble.remove(); activeBubble = null; }
-  if (activeBox) { activeBox.classList.remove('active'); activeBox = null; }
-}
-
-document.addEventListener('click', closeBubble);
+// close all on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.bbl') && !e.target.closest('.hbox')) {
+    dismissAll(true);
+    setTimeout(showB0, 600);
+  }
+});
 
 function switchPage(toPage) {
   if (currentFormPage === toPage) return;
+  dismissAll(false);
   const card = document.getElementById('formCard');
   card.classList.add('switching');
   setTimeout(() => {
@@ -501,7 +870,6 @@ function switchPage(toPage) {
     document.getElementById('formImg').src = toPage === 1 ? '1040_page-1.png' : '1040_page-2.png';
     document.getElementById('btn1').classList.toggle('active', toPage === 1);
     document.getElementById('btn2').classList.toggle('active', toPage === 2);
-    closeBubble();
     card.classList.remove('switching');
     card.classList.add('switch-in');
     document.getElementById('formImg').onload = () => {
@@ -518,7 +886,10 @@ window.addEventListener('load', () => {
   document.getElementById('formImg').onload = () => render(P1);
   if (document.getElementById('formImg').complete) render(P1);
 });
-window.addEventListener('resize', () => { currentFormPage === 1 ? render(P1) : render(P2); });
+window.addEventListener('resize', () => {
+  // reposition live bubbles on resize
+  currentFormPage === 1 ? render(P1) : render(P2);
+});
 </script>
 </body>
 </html>
